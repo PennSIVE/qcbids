@@ -1,0 +1,5 @@
+node_modules
+db
+yarn.lock
+*.p12
+.env

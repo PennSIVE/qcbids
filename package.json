@@ -1,0 +1,51 @@
+{
+  "name": "qcbids",
+  "version": "0.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps",
+    "release-mac": "electron-builder -m -p always",
+    "release": "electron-builder -wl -p always"
+  },
+  "build": {
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "pennsive",
+        "repo": "cube"
+      }
+    ],
+    "appId": "com.github.pennsive.cube",
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "zip",
+        "dmg"
+      ]
+    }
+  },
+  "author": "Tim Robert-Fitzgerald <Timothy.Robert-Fitzgerald@Pennmedicine.upenn.edu>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PennSIVE/cube/issues"
+  },
+  "homepage": "https://github.com/PennSIVE/cube#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PennSIVE/cube.git"
+  },
+  "devDependencies": {
+    "electron": "^9.2.1",
+    "electron-builder": "^22.8.0"
+  },
+  "dependencies": {
+    "bootstrap": "^4.5.2",
+    "electron-updater": "^4.3.4",
+    "sqlite3": "^5.0.0"
+  }
+}

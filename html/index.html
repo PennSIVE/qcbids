@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>QC BIDS</title>
+  <!-- https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+  <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body style="padding-top: 50px">
+  <nav class="navbar fixed-top navbar-dark bg-primary" id="navbar" style="-webkit-app-region: drag">
+    &nbsp;
+  </nav>
+  <div class="container-fluid d-none" id="main">
+    <nav class="tabbable mt-2 mb-2">
+      <div class="nav nav-pills" id="subject-list" role="tablist">
+      </div>
+    </nav>
+    <div class="btn-group mb-2" role="group" aria-label="Modalities" id="modality-list"></div>
+    <div class="btn-group float-right mb-2" role="group" aria-label="pagination">
+      <button type="button" onclick="changePage(-1)" id="prev" class="btn btn-secondary" disabled>Previous</button>
+      <button type="button" onclick="changePage(1)" id="next" class="btn btn-secondary">Next</button>
+    </div>
+    <div id="content-list">
+    </div>
+  </div>
+  <div class="container">
+    <div class="row">
+      <div class="col">
+        <form id="form">
+          <p class="mb-0 pb-0">Select a BIDS database</p>
+          <div class="mb-0 mt-0">
+            <div class="custom-file">
+              <input type="file" class="custom-file-input" id="db" required>
+              <label class="custom-file-label" for="db">Choose file</label>
+            </div>
+          </div>
+          <div class="form-group pt-1">
+            <label for="user">JPG directory</label>
+            <input type="text" class="form-control" placeholder="JPG path" id="jpg_path" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Load dataset</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+<script src="index.js"></script>
+
+</html>
