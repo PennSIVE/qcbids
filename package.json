@@ -1,6 +1,6 @@
 {
   "name": "qcbids",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -17,10 +17,10 @@
       {
         "provider": "github",
         "owner": "pennsive",
-        "repo": "cube"
+        "repo": "qcbids"
       }
     ],
-    "appId": "com.github.pennsive.cube",
+    "appId": "com.github.pennsive.qcbids",
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
@@ -32,12 +32,12 @@
   "author": "Tim Robert-Fitzgerald <Timothy.Robert-Fitzgerald@Pennmedicine.upenn.edu>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/PennSIVE/cube/issues"
+    "url": "https://github.com/PennSIVE/qcbids/issues"
   },
-  "homepage": "https://github.com/PennSIVE/cube#readme",
+  "homepage": "https://github.com/PennSIVE/qcbids#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/PennSIVE/cube.git"
+    "url": "git+https://github.com/PennSIVE/qcbids.git"
   },
   "devDependencies": {
     "electron": "^9.2.1",
@@ -46,6 +46,7 @@
   "dependencies": {
     "bootstrap": "^4.5.2",
     "electron-updater": "^4.3.4",
-    "sqlite3": "^5.0.0"
+    "sqlite3": "^5.0.0",
+    "uuid": "^8.3.0"
   }
 }

@@ -18,7 +18,7 @@ function loadLayout(dbFile, imagePath, page = 0) {
 
     db.all(subjects, [], (err, rows) => {
         if (err) throw err;
-        
+
         rows.forEach((row) => {
             // for each subject
             let subjLabel = row.value
@@ -42,7 +42,7 @@ function loadLayout(dbFile, imagePath, page = 0) {
                     }
                 })
             })
-            
+
             let lastPath = undefined;
             let currentMetaData = {};
             db.all(sql, [], (err, rows) => {
@@ -61,7 +61,17 @@ function loadLayout(dbFile, imagePath, page = 0) {
                 for (let i = 0; i < layout[subjLabel].folders.length; i++) {
                     // find files for each folder
                     const folder = layout[subjLabel].folders[i];
-                    layout[subjLabel].files[folder] = fs.readdirSync(`${imagePath}/${folder}`)   
+                    try {
+                        layout[subjLabel].files[folder] = fs.readdirSync(`${imagePath}/${folder}`)
+                    } catch (error) {
+                        if (error.code === 'ENOENT') {
+                            console.log(`${imagePath}/${folder} not found`)
+                            delete layout[subjLabel].files[folder];
+                            layout[subjLabel].folders.filter(e => e !== folder)
+                        } else {
+                            throw error;
+                        }
+                    }
                 }
                 win.webContents.send('add-subject', layout[subjLabel]);
             });

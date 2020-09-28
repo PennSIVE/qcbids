@@ -1,5 +1,6 @@
 node_modules
-db
+dist
+var
 yarn.lock
 *.p12
 .env
