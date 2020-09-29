@@ -6,7 +6,7 @@ const MAX_SUBJECTS = 10;
 let win = undefined
 let db = undefined
 
-function loadLayout(dbFile, imagePath, page = 0) {
+function loadLayout(dbFile, imagePath, page = 0, skip_reviewed = true) {
     let layout = {}
     db = new sqlite3.Database(dbFile)
 
@@ -14,7 +14,13 @@ function loadLayout(dbFile, imagePath, page = 0) {
     db.run(`CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, subject_id INTEGER, scan TEXT, content TEXT, rating REAL);`)
 
     let offset = page * MAX_SUBJECTS
-    let subjects = `SELECT DISTINCT _value AS value FROM tags WHERE entity_name = 'subject' ORDER BY _value ASC LIMIT ${MAX_SUBJECTS} OFFSET ${offset}`
+    let subjects = (skip_reviewed) ?
+        `SELECT value FROM
+            (SELECT DISTINCT _value AS value, COUNT(*) AS num_subj_images,
+                (SELECT COUNT(*) AS cnt FROM reports WHERE subject_id = CAST(_value AS INT)) AS num_subj_reports
+            FROM tags WHERE entity_name = 'subject' GROUP BY _value)
+            WHERE num_subj_images != num_subj_reports ORDER BY value ASC LIMIT ${MAX_SUBJECTS} OFFSET ${offset}` :
+        `SELECT DISTINCT _value AS value FROM tags WHERE entity_name = 'subject' ORDER BY _value ASC LIMIT ${MAX_SUBJECTS} OFFSET ${offset}`
 
     db.all(subjects, [], (err, rows) => {
         if (err) throw err;
