@@ -3,6 +3,7 @@ const { dialog } = electron.remote;
 const { ipcRenderer } = electron;
 const uuidv4 = require('uuid').v4;
 let page = 0;
+let subjects_to_load = 0, subjects_per_page = 0; // MAX_SUBJECTS sent by main process, then decremented every time we receive new subj
 
 document.getElementById('form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -15,6 +16,7 @@ document.getElementById('form').addEventListener('submit', (e) => {
     document.getElementById('navbar').innerHTML = `<span class="navbar-text text-right w-100 text-light small">Loaded ${document.getElementById('db').files[0].path}</span>`
     e.target.classList.add('d-none')
     document.getElementById('main').classList.remove('d-none')
+    document.getElementById('progress').classList.remove('d-none')
 });
 document.getElementById('jpg_path').addEventListener('click', selectDir);
 
@@ -85,6 +87,10 @@ function selectDir(e) {
     });
 }
 
+function toggleBackground(targetFolderId, clickedFolderId, start) {
+    Array.from(document.getElementsByClassName(`underlay-${clickedFolderId}`)).forEach((img, i) => img.src = `file://${document.getElementById('jpg_path').getAttribute('value')}/${targetFolderId}/output-slice${(i + start).toString().padStart(3, '0')}.jpg`)
+}
+
 ipcRenderer.on('add-subject', (event, subj) => {
     let uuid = uuidv4();
     document.getElementById('subject-list').innerHTML += `<a class="nav-item nav-link subject-button" id="subject-button-${uuid}" onclick="showSession('${uuid}', 0, '01')">sub-${subj.id}</a>`
@@ -119,21 +125,70 @@ ipcRenderer.on('add-subject', (event, subj) => {
         </div></form>`
         let folderLabel = folder.split("_").splice(2).join(" ")
         modalityList += `<button type="button" class="btn btn-outline-secondary pane-button pane-button-${uuid}-${thisSession} ${modalityDisplay}" id="pane-button-${uuid}-${i}" onclick="showPane(event.target, document.getElementsByClassName('pane-button-${uuid}-${thisSession}'), document.getElementById('pane-${uuid}-${i}'))">${folderLabel}</button>`
-        contentList += `<div class="content-pane container-fluid ${i === 0 ? '' : 'd-none'}" id="pane-${uuid}-${i}">${reportForm}<div class="row">`
+        contentList += `<div class="content-pane container-fluid ${i === 0 ? '' : 'd-none'}" id="pane-${uuid}-${i}">${reportForm}`
+        let contentListInner = '<div class="row position-relative" style="z-index:-1">'
         if (subj.files[folder] === undefined) {
-            contentList += `<p class="text-danger">${folder} could not be found!</p>`
+            contentListInner += `<p class="text-danger">${folder} could not be found!</p>`
         } else {
-            let lowerLimit = Math.round(subj.files[folder].length * 0.2);
-            let upperLimit = subj.files[folder].length - lowerLimit;
+            let lowerLimit = subj.files[folder].length * 0.3;
+            let upperLimit = subj.files[folder].length * 0.8;
+            let overlaySliders = new Set();
+            let defaultComplement = undefined
+            // todo this is ugly
+            let base = folder.split("_").splice(0, 3).join("_")
+            for (let i = 0; i < subj.folders.length; i++) {
+                if (subj.folders[i].includes(base) && subj.folders[i].includes('brain')) {
+                    defaultComplement = subj.folders[i]
+                    break
+                }
+            }
             subj.files[folder].forEach((file, i) => {
                 if (i > lowerLimit && i < upperLimit) {
-                    contentList += `<div class="col-1 m-0 p-0"><img alt="${folder}" class="p-0 m-0 img-fluid" src="file://${document.getElementById('jpg_path').getAttribute('value')}/${folder}/${file}" /></div>`    
+                    if (folder.includes('mimosa') || folder.includes('thalamus')) {
+                        contentListInner += `<div class="col-1 m-0 p-0">
+                                            <img alt="${folder}" class="underlay-${folder} p-0 m-0 img-fluid" src="file://${document.getElementById('jpg_path').getAttribute('value')}/${defaultComplement}/${file}" />
+                                            <img alt="${folder}" class="overlay-${folder} p-0 m-0 img-fluid position-absolute" src="file://${document.getElementById('jpg_path').getAttribute('value')}/${folder}/${file}" style="opacity: 0.5;height:auto;width:100%;top:0;left:0;" />
+                                        </div>`
+                        overlaySliders.add(folder);
+                    } else {
+                        contentListInner += `<div class="col-1 m-0 p-0"><img alt="${folder}" class="p-0 m-0 img-fluid" src="file://${document.getElementById('jpg_path').getAttribute('value')}/${folder}/${file}" /></div>`
+                    }
                 }
-                
+
+            })
+            overlaySliders.forEach((id, i) => {
+                let dropdownOptions = subj.folders.filter(x => x.includes(folder.split("_").splice(0, 3).join("_"))).map(x => `<a class="dropdown-item" href="#" onclick="toggleBackground('${x}', '${id}', Math.round(${subj.files[x].length} * 0.3))">${x}</a>`)
+                contentList += `<form class="position-sticky">
+                <div class="form-group">
+                    <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Background brain
+                        </button>
+                        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                            ${dropdownOptions}
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="overlay-slider-${i}">Opacity</label>
+                    <input type="range" onchange="pct = (this.value / 100); Array.from(document.getElementsByClassName('overlay-${id}')).forEach(el => el.style.opacity = pct)" class="custom-range" id="overlay-slider-${i}" min="0" max="100" value="50">
+                </div></form>`
             })
         }
-        contentList += '</div></div>'
+        contentListInner += '</div>'
+        contentList += contentListInner + '</div>'
     });
     document.getElementById('modality-list').innerHTML = modalityList;
     document.getElementById('content-list').innerHTML = contentList;
+    subjects_to_load--
+    document.getElementById('progress').style.width = (((subjects_per_page - subjects_to_load) / subjects_per_page) * 100).toString() + '%'
+    if (subjects_to_load == 0) {
+        showSession(uuid, 0, '01')
+        document.getElementById('progress').classList.add('d-none')
+    }
+})
+
+ipcRenderer.on('set-max-subj', (event, max_subj) => {
+    subjects_per_page = max_subj
+    subjects_to_load = max_subj
 })

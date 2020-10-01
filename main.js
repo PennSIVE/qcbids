@@ -133,6 +133,9 @@ function createWindow() {
 
     // and load the index.html of the app.
     win.loadFile('html/index.html')
+    win.webContents.on('did-finish-load', () => {
+        win.webContents.send('set-max-subj', MAX_SUBJECTS)
+    })
 
 }
 
@@ -165,6 +168,5 @@ ipcMain.on('loadLayout', (event, args) => {
 });
 
 ipcMain.on('report', (event, args) => {
-    console.log(args);
     saveReport(args.subj, args.textarea, args.rating, args.folder)
 });
