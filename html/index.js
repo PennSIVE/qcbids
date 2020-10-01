@@ -4,6 +4,7 @@ const { ipcRenderer } = electron;
 const uuidv4 = require('uuid').v4;
 let page = 0;
 let subjects_to_load = 0, subjects_per_page = 0; // MAX_SUBJECTS sent by main process, then decremented every time we receive new subj
+let jpg_root = undefined, dbPath = undefined;
 
 document.getElementById('form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -13,10 +14,7 @@ document.getElementById('form').addEventListener('submit', (e) => {
         page: 0
     }
     ipcRenderer.send('loadLayout', formData);
-    document.getElementById('navbar').innerHTML = `<span class="navbar-text text-right w-100 text-light small">Loaded ${document.getElementById('db').files[0].path}</span>`
-    e.target.classList.add('d-none')
-    document.getElementById('main').classList.remove('d-none')
-    document.getElementById('progress').classList.remove('d-none')
+    hideForm()
 });
 document.getElementById('jpg_path').addEventListener('click', selectDir);
 
@@ -24,10 +22,12 @@ function changePage(direction) {
     page += direction
     document.getElementById('prev').disabled = page === 0
     ipcRenderer.send('loadLayout', {
-        jpegs: document.getElementById('jpg_path').getAttribute('value'),
-        db: document.getElementById('db').files[0].path,
+        jpegs: jpg_root,
+        db: dbPath,
         page: page
     });
+    document.getElementById('modality-list').innerHTML = ''
+    document.getElementById('content-list').innerHTML = ''
 }
 
 function showSession(uuid, folderIndex, sesIndex) {
@@ -66,6 +66,13 @@ function submitReport(e, subj, folder) {
     ipcRenderer.send('report', formData);
 }
 
+function hideForm() {
+    document.getElementById('navbar').innerHTML = `<span class="navbar-text text-right w-100 text-light small">Loaded ${dbPath} <button onclick="ipcRenderer.send('clearSettings', null)" type="button" class="close" style="position: relative;left: 5px;bottom: 4px;"><span aria-hidden="true">&times;</span></button></span>`
+    document.getElementById('form').classList.add('d-none')
+    document.getElementById('main').classList.remove('d-none')
+    document.getElementById('progress').classList.remove('d-none')
+}
+
 function selectDir(e) {
     e.preventDefault();
     const id = e.target.id;
@@ -88,10 +95,11 @@ function selectDir(e) {
 }
 
 function toggleBackground(targetFolderId, clickedFolderId, start) {
-    Array.from(document.getElementsByClassName(`underlay-${clickedFolderId}`)).forEach((img, i) => img.src = `file://${document.getElementById('jpg_path').getAttribute('value')}/${targetFolderId}/output-slice${(i + start).toString().padStart(3, '0')}.jpg`)
+    Array.from(document.getElementsByClassName(`underlay-${clickedFolderId}`)).forEach((img, i) => img.src = `file://${jpg_root}/${targetFolderId}/output-slice${(i + start).toString().padStart(3, '0')}.jpg`)
 }
 
 ipcRenderer.on('add-subject', (event, subj) => {
+    hideForm();
     let uuid = uuidv4();
     document.getElementById('subject-list').innerHTML += `<a class="nav-item nav-link subject-button" id="subject-button-${uuid}" onclick="showSession('${uuid}', 0, '01')">sub-${subj.id}</a>`
     let modalityDisplay = document.getElementById('modality-list').innerHTML == '' ? '' : 'd-none';
@@ -146,12 +154,12 @@ ipcRenderer.on('add-subject', (event, subj) => {
                 if (i > lowerLimit && i < upperLimit) {
                     if (folder.includes('mimosa') || folder.includes('thalamus')) {
                         contentListInner += `<div class="col-1 m-0 p-0">
-                                            <img alt="${folder}" class="underlay-${folder} p-0 m-0 img-fluid" src="file://${document.getElementById('jpg_path').getAttribute('value')}/${defaultComplement}/${file}" />
-                                            <img alt="${folder}" class="overlay-${folder} p-0 m-0 img-fluid position-absolute" src="file://${document.getElementById('jpg_path').getAttribute('value')}/${folder}/${file}" style="opacity: 0.5;height:auto;width:100%;top:0;left:0;" />
+                                            <img alt="${folder}" class="underlay-${folder} p-0 m-0 img-fluid" src="file://${jpg_root}/${defaultComplement}/${file}" />
+                                            <img alt="${folder}" class="overlay-${folder} p-0 m-0 img-fluid position-absolute" src="file://${jpg_root}/${folder}/${file}" style="opacity: 0.5;height:auto;width:100%;top:0;left:0;" />
                                         </div>`
                         overlaySliders.add(folder);
                     } else {
-                        contentListInner += `<div class="col-1 m-0 p-0"><img alt="${folder}" class="p-0 m-0 img-fluid" src="file://${document.getElementById('jpg_path').getAttribute('value')}/${folder}/${file}" /></div>`
+                        contentListInner += `<div class="col-1 m-0 p-0"><img alt="${folder}" class="p-0 m-0 img-fluid" src="file://${jpg_root}/${folder}/${file}" /></div>`
                     }
                 }
 
@@ -192,3 +200,5 @@ ipcRenderer.on('set-max-subj', (event, max_subj) => {
     subjects_per_page = max_subj
     subjects_to_load = max_subj
 })
+ipcRenderer.on('set-jpg-root', (event, path) => jpg_root = path)
+ipcRenderer.on('set-db-path', (event, path) => dbPath = path)
