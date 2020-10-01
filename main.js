@@ -2,11 +2,23 @@ const { app, BrowserWindow, ipcMain } = require('electron')
 const { autoUpdater } = require("electron-updater")
 const fs = require('fs')
 const sqlite3 = require('sqlite3')
+const storage = require('electron-json-storage');
 const MAX_SUBJECTS = 10;
 let win = undefined
 let db = undefined
 
-function loadLayout(dbFile, imagePath, page = 0, skip_reviewed = true) {
+function clearSettings() {
+    storage.clear(function (error) {
+        if (error) throw error;
+    });
+    win.close()
+    createWindow()
+}
+
+function loadLayout(dbFile, imagePath, page = 0, skipReviewed = true) {
+    win.webContents.send('set-jpg-root', imagePath)
+    win.webContents.send('set-db-path', dbFile)
+    storage.set('settings', { dbFile: dbFile, imagePath: imagePath, page: page, skipReviewed: skipReviewed })
     let layout = {}
     db = new sqlite3.Database(dbFile)
 
@@ -14,7 +26,7 @@ function loadLayout(dbFile, imagePath, page = 0, skip_reviewed = true) {
     db.run(`CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, subject_id INTEGER, scan TEXT, content TEXT, rating REAL);`)
 
     let offset = page * MAX_SUBJECTS
-    let subjects = (skip_reviewed) ?
+    let subjects = (skipReviewed) ?
         `SELECT value FROM
             (SELECT DISTINCT _value AS value, COUNT(*) AS num_subj_images,
                 (SELECT COUNT(*) AS cnt FROM reports WHERE subject_id = CAST(_value AS INT)) AS num_subj_reports
@@ -111,10 +123,6 @@ function saveReport(id, content, rating, scan) {
     db.run(`INSERT INTO reports (subject_id, content, rating, scan) VALUES (${id}, '${content}', ${rating}, '${scan}')`)
 }
 
-function page(page) {
-
-}
-
 function init() {
     createWindow();
     autoUpdater.checkForUpdatesAndNotify();
@@ -127,12 +135,25 @@ function createWindow() {
         height: 800,
         titleBarStyle: 'hiddenInset',
         webPreferences: {
-            nodeIntegration: true
+            nodeIntegration: true,
+            enableRemoteModule: true
         }
     })
 
     // and load the index.html of the app.
     win.loadFile('html/index.html')
+    win.webContents.on('did-finish-load', () => {
+        win.webContents.send('set-max-subj', MAX_SUBJECTS)
+        storage.has('settings', function (error, hasKey) {
+            if (error) throw error;
+            if (hasKey) {
+                storage.get('settings', function (error, data) {
+                    if (error) throw error;
+                    loadLayout(data.dbFile, data.imagePath, data.page, data.skipReviewed)
+                });
+            }
+        });
+    })
 
 }
 
@@ -165,6 +186,7 @@ ipcMain.on('loadLayout', (event, args) => {
 });
 
 ipcMain.on('report', (event, args) => {
-    console.log(args);
     saveReport(args.subj, args.textarea, args.rating, args.folder)
 });
+
+ipcMain.on('clearSettings', _ => clearSettings());
