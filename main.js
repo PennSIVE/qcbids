@@ -123,10 +123,6 @@ function saveReport(id, content, rating, scan) {
     db.run(`INSERT INTO reports (subject_id, content, rating, scan) VALUES (${id}, '${content}', ${rating}, '${scan}')`)
 }
 
-function page(page) {
-
-}
-
 function init() {
     createWindow();
     autoUpdater.checkForUpdatesAndNotify();

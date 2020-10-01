@@ -1,6 +1,6 @@
 {
   "name": "qcbids",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -40,13 +40,13 @@
     "url": "git+https://github.com/PennSIVE/qcbids.git"
   },
   "devDependencies": {
-    "electron": "^9.2.1",
+    "electron": "^9.3.1",
     "electron-builder": "^22.8.0"
   },
   "dependencies": {
     "bootstrap": "^4.5.2",
     "electron-json-storage": "^4.2.0",
-    "electron-updater": "^4.3.4",
+    "electron-updater": "^4.3.5",
     "jquery": "^3.5.1",
     "sqlite3": "^5.0.0",
     "uuid": "^8.3.0"

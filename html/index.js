@@ -57,10 +57,16 @@ function showPane(paneButton, paneButtons, paneDiv) {
 
 function submitReport(e, subj, folder) {
     e.preventDefault();
+    let rating = undefined
+    Array.from(document.getElementById(`rating-${folder}`).children).forEach(child => {
+        if (child.classList.contains('active')) {
+            rating = child.dataset.rating
+        }
+    })
     let formData = {
         subj: subj,
         folder: folder,
-        rating: document.getElementById(`rating-${folder}`).value,
+        rating: rating,
         textarea: document.getElementById(`textarea-${folder}`).value
     }
     ipcRenderer.send('report', formData);
@@ -115,14 +121,20 @@ ipcRenderer.on('add-subject', (event, subj) => {
         }
         if (subj.report[folder] === undefined) {
             subj.report[folder] = {
-                rating: 0,
+                rating: -1,
                 content: ''
             }
         }
         let reportForm = `<form onsubmit="submitReport(event, '${subj.id}', '${folder}')">
         <div class="form-group">
             <label for="rating-${folder}">Rating</label>
-            <input type="range" class="custom-range" id="rating-${folder}" min="0" max="100" value="${subj.report[folder].rating}">
+            <div class="btn-group" role="group" aria-label="Rating" id="rating-${folder}">
+                <button type="button" data-rating="0" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active')" class="btn btn-outline-danger ${subj.report[folder].rating == 0 ? 'active' : ''}">Awful</button>
+                <button type="button" data-rating="25" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active')" class="btn btn-outline-warning ${subj.report[folder].rating == 25 ? 'active' : ''}">Bad</button>
+                <button type="button" data-rating="50" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active')" class="btn btn-outline-secondary ${subj.report[folder].rating == 50 ? 'active' : ''}">Ok</button>
+                <button type="button" data-rating="75" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active')" class="btn btn-outline-primary ${subj.report[folder].rating == 75 ? 'active' : ''}">Good</button>
+                <button type="button" data-rating="100" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active')" class="btn btn-outline-success ${subj.report[folder].rating == 100 ? 'active' : ''}">Great</button>
+            </div>
         </div>
         <div class="form-group">
             <label for="textarea-${folder}">Comments</label>
