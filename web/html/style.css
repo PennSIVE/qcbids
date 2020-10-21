@@ -1,0 +1,9 @@
+.tabbable .nav {
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+}
+
+.tabbable .nav .nav-link {
+  white-space: nowrap;
+}

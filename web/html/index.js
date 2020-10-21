@@ -1,39 +1,38 @@
-const electron = require('electron');
-const { dialog } = electron.remote;
-const { ipcRenderer } = electron;
-const uuidv4 = require('uuid').v4;
-let page = 0;
-let subjects_to_load = 0, subjects_per_page = 0; // MAX_SUBJECTS sent by main process, then decremented every time we receive new subj
-let jpg_root = undefined, dbPath = undefined;
+const params = new URLSearchParams(window.location.search)
+const page = params.get('page') || 0
+const jpg_root = window.location.pathname
 
-document.getElementById('form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    let formData = {
-        jpegs: document.getElementById('jpg_path').getAttribute('value'),
-        db: document.getElementById('db').files[0].path,
-        page: 0
+const uuidv4 = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+const getJSON = (url, callback) => {
+    var xhr = new XMLHttpRequest()
+    xhr.open('GET', url, true)
+    xhr.responseType = 'json'
+    xhr.onload = () => {
+        var status = xhr.status
+        if (status === 200) {
+            callback(null, xhr.response)
+        } else {
+            callback(status, xhr.response)
+        }
     }
-    ipcRenderer.send('loadLayout', formData);
-    hideForm()
-});
-document.getElementById('jpg_path').addEventListener('click', selectDir);
+    xhr.send()
+}
+
 
 function changePage(direction) {
-    page += direction
-    document.getElementById('prev').disabled = page === 0
-    ipcRenderer.send('loadLayout', {
-        jpegs: jpg_root,
-        db: dbPath,
-        page: page
-    });
-    document.getElementById('modality-list').innerHTML = ''
-    document.getElementById('content-list').innerHTML = ''
+    window.location.href = window.location.pathname+"?page=" + (Number(page) + Number(direction))
 }
 
 function showSession(uuid, folderIndex, sesIndex) {
     subjButton = document.getElementById(`subject-button-${uuid}`)
     sesButton = document.getElementById(`session-button-${uuid}-${folderIndex}`)
     paneDiv = document.getElementById(`pane-${uuid}-${folderIndex}`)
+    console.log(`pane-${uuid}-${folderIndex}`)
     paneButton = document.getElementById(`pane-button-${uuid}-${folderIndex}`)
     paneButtons = document.getElementsByClassName(`pane-button-${uuid}-${sesIndex}`)
     sesButtons = document.getElementsByClassName(`session-button-${uuid}`)
@@ -72,40 +71,8 @@ function submitReport(e, subj, folder) {
     ipcRenderer.send('report', formData);
 }
 
-function hideForm() {
-    document.getElementById('navbar').innerHTML = `<span class="navbar-text text-right w-100 text-light small">Loaded ${dbPath} <button onclick="ipcRenderer.send('clearSettings', null)" type="button" class="close" style="position: relative;left: 5px;bottom: 4px;"><span aria-hidden="true">&times;</span></button></span>`
-    document.getElementById('form').classList.add('d-none')
-    document.getElementById('main').classList.remove('d-none')
-    document.getElementById('progress').classList.remove('d-none')
-}
 
-function selectDir(e) {
-    e.preventDefault();
-    const id = e.target.id;
-    const path = dialog.showOpenDialog({
-        properties: ['openDirectory']
-    });
-    path.then(values => {
-        if (values.filePaths[0] !== undefined) {
-            e.target.classList = 'is-valid custom-file-input';
-            document.querySelectorAll('[for="' + id + '"]')[0].style.borderColor = '#28a745'
-            document.getElementById(id + '-help').innerText = 'You selected ' + values.filePaths[0];
-            document.getElementById(id).setAttribute('value', values.filePaths[0]);
-        } else {
-            e.target.classList = 'is-invalid custom-file-input';
-            document.getElementById(id + '-help').innerText = 'You didn\'t select anything';
-            document.querySelectorAll('[for="' + id + '"]')[0].style.borderColor = '#dc3545'
-            document.getElementById(id).setAttribute('value', '');
-        }
-    });
-}
-
-function toggleBackground(targetFolderId, clickedFolderId, start) {
-    Array.from(document.getElementsByClassName(`underlay-${clickedFolderId}`)).forEach((img, i) => img.src = `file://${jpg_root}/${targetFolderId}/output-slice${(i + start).toString().padStart(3, '0')}.jpg`)
-}
-
-ipcRenderer.on('add-subject', (event, subj) => {
-    hideForm();
+const addSubjectToDom = (subj) => {
     let uuid = uuidv4();
     document.getElementById('subject-list').innerHTML += `<a class="nav-item nav-link subject-button" id="subject-button-${uuid}" onclick="showSession('${uuid}', 0, '01')">sub-${subj.id}</a>`
     let modalityDisplay = document.getElementById('modality-list').innerHTML == '' ? '' : 'd-none';
@@ -166,12 +133,12 @@ ipcRenderer.on('add-subject', (event, subj) => {
                 if (i > lowerLimit && i < upperLimit) {
                     if (folder.includes('mimosa') || folder.includes('thalamus')) {
                         contentListInner += `<div class="col-1 m-0 p-0">
-                                            <img alt="${folder}" class="underlay-${folder} p-0 m-0 img-fluid" src="file://${jpg_root}/${defaultComplement}/${file}" />
-                                            <img alt="${folder}" class="overlay-${folder} p-0 m-0 img-fluid position-absolute" src="file://${jpg_root}/${folder}/${file}" style="opacity: 0.5;height:auto;width:100%;top:0;left:0;" />
+                                            <img alt="${folder}" class="underlay-${folder} p-0 m-0 img-fluid" src="${jpg_root}${defaultComplement}/${file}" />
+                                            <img alt="${folder}" class="overlay-${folder} p-0 m-0 img-fluid position-absolute" src="${jpg_root}${folder}/${file}" style="opacity: 0.5;height:auto;width:100%;top:0;left:0;" />
                                         </div>`
                         overlaySliders.add(folder);
                     } else {
-                        contentListInner += `<div class="col-1 m-0 p-0"><img alt="${folder}" class="p-0 m-0 img-fluid" src="file://${jpg_root}/${folder}/${file}" /></div>`
+                        contentListInner += `<div class="col-1 m-0 p-0"><img alt="${folder}" class="p-0 m-0 img-fluid" src="${jpg_root}${folder}/${file}" /></div>`
                     }
                 }
 
@@ -200,17 +167,16 @@ ipcRenderer.on('add-subject', (event, subj) => {
     });
     document.getElementById('modality-list').innerHTML = modalityList;
     document.getElementById('content-list').innerHTML = contentList;
-    subjects_to_load--
-    document.getElementById('progress').style.width = (((subjects_per_page - subjects_to_load) / subjects_per_page) * 100).toString() + '%'
-    if (subjects_to_load == 0) {
-        showSession(uuid, 0, '01')
-        document.getElementById('progress').classList.add('d-none')
-    }
-})
+}
 
-ipcRenderer.on('set-max-subj', (event, max_subj) => {
-    subjects_per_page = max_subj
-    subjects_to_load = max_subj
-})
-ipcRenderer.on('set-jpg-root', (event, path) => jpg_root = path)
-ipcRenderer.on('set-db-path', (event, path) => dbPath = path)
+const loadSubjects = () => {
+    getJSON('/api?' + new URLSearchParams({
+        page: page,
+        limit: 10
+    }), (err, data) => {
+        if (err === null) {
+            data.forEach(s => addSubjectToDom(s))
+        }
+    })
+}
+loadSubjects()

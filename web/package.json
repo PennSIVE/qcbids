@@ -1,0 +1,25 @@
+{
+  "name": "qcbids-web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PennSIVE/qcbids.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PennSIVE/qcbids/issues"
+  },
+  "homepage": "https://github.com/PennSIVE/qcbids#readme",
+  "dependencies": {
+    "bootstrap": "^5.0.0-alpha2",
+    "express": "^4.17.1",
+    "mime": "^2.4.6",
+    "sqlite3": "^5.0.0"
+  }
+}

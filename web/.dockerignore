@@ -1,8 +1,3 @@
 node_modules
 npm-debug.log
-dist
-var
-yarn.lock
-*.p12
-.env
 .DS_Store
