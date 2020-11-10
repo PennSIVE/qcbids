@@ -56,10 +56,11 @@ const loadSubjects = (res, page, limit, skipReviewed = true) => {
                 id: subjLabel,
                 folders: [], // each nifti has a folder of jpegs
                 files: {}, // the actual jpegs, indexed by folder name
+                niftis: {}, // folder name => actual path to nifti
                 report: {}
             }
 
-            db.all(`SELECT content, rating, scan, '${subjLabel}' AS subj FROM reports WHERE subject_id = ${subjLabel}`, [], (err, rows) => {
+            db.all(`SELECT content, rating, scan, '${subjLabel}' AS subj FROM reports WHERE subject_id = '${subjLabel}'`, [], (err, rows) => {
                 if (err) throw err;
                 rows.forEach((row) => {
                     layout[row.subj].report[row.scan] = {
@@ -77,8 +78,12 @@ const loadSubjects = (res, page, limit, skipReviewed = true) => {
                     // for each subject tag
                     if (lastPath !== row.file_path && Object.keys(currentMetaData).length > 0) {
                         // we've gotten to a new file, push old
-                        layout[row.subj].folders.push(bidsName(currentMetaData))
+                        let folderName = bidsName(currentMetaData)
+                        layout[row.subj].folders.push(folderName)
+                        layout[row.subj].niftis[folderName] = (lastPath.includes("derivatives") ? '/derivatives/' : '/')
+                                                                + lastPath.slice(/sub-[0-9]*/.exec(lastPath).index)
                         currentMetaData = {}
+                        lastFolder = folderName
                     }
 
                     lastPath = row.file_path
@@ -111,7 +116,10 @@ const loadSubjects = (res, page, limit, skipReviewed = true) => {
 
 app.use(express.static(__dirname + '/html'))
 app.use(express.static(__dirname + '/node_modules'))
+app.use('/papaya', express.static(__dirname + '/Papaya/release/current/minimal'))
 app.use(express.static('/usr/src/data/images'))
+app.use(express.static('/usr/src/data/nifti'))
+app.use(express.json())
 
 app.get("/node_modules*", (req, res) => {
     // let type = mime.getType(req.originalUrl);
@@ -124,8 +132,19 @@ app.get("/api", (req, res) => {
     loadSubjects(res, req.query.page, req.query.limit)
 })
 
+app.post('/review', (req, res) => {
+    db.run(`INSERT INTO reports (subject_id, content, rating, scan) VALUES (${req.body.subj}, '${req.body.textarea}', ${req.body.rating}, '${req.body.folder}')`, (err) => {
+        if (err) {
+            console.log(err)
+            res.status(500).json(err)
+        } else {
+            res.status(200).json('success')
+        }
+    })
+})
+
 app.listen(port, () => {
-    console.log(`Starting on port ${port}`)
+    console.log(`Starting... http://localhost:${port}`)
     // ensure reports table exists
     db.run('CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, subject_id INTEGER, scan TEXT, content TEXT, rating REAL)')
 })

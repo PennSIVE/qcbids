@@ -4,16 +4,35 @@
 <head>
   <meta charset="UTF-8">
   <title>QC BIDS</title>
-  <!-- https://electronjs.org/docs/tutorial/security#csp-meta-tag -->
-  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
   <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/papaya/papaya.css?build=1449" />
 </head>
 
-<body>
-  <div style="clear:both;height:50px"></div>
+<body class="bg-dark text-light">
+  <!-- Nifti modal -->
+  <div class="modal fade" id="niftiModal" tabindex="-1" aria-labelledby="niftiModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header">
+          <h5 class="modal-title" id="niftiModalLabel">Nifti viewer</h5>
+          <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="nifti-viewer">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="clear:both;height:60px"></div>
   <nav class="navbar fixed-top navbar-dark bg-primary" id="navbar" style="-webkit-app-region: drag">
-    &nbsp;
+    <div class="container-fluid">
+      <div class="btn-group justify-content-end d-flex" role="group" aria-label="pagination">
+        <button type="button" onclick="changePage(-1)" id="prev" class="btn btn-secondary">Previous</button>
+        <button type="button" onclick="changePage(1)" id="next" class="btn btn-secondary">Next</button>
+      </div>
+      <div id="navbar-content"></div>
+    </div>
   </nav>
   <div class="container-fluid" id="main">
     <nav class="tabbable mt-2 mb-2">
@@ -24,10 +43,10 @@
       <div class="nav nav-tabs" id="session-list" role="tablist">
       </div>
     </nav>
-    <div class="btn-group mb-2" role="group" aria-label="Modalities" id="modality-list"></div>
-    <div class="btn-group float-right mb-2" role="group" aria-label="pagination">
-      <button type="button" onclick="changePage(-1)" id="prev" class="btn btn-secondary" disabled>Previous</button>
-      <button type="button" onclick="changePage(1)" id="next" class="btn btn-secondary">Next</button>
+    <div class="btn-group mb-2 justify-content-center w-100" role="group" aria-label="Modalities" id="modality-list"></div>
+    <div class="d-flex align-items-center mb-4 mt-2" id="loader">
+      <strong>Loading...</strong>
+      <div class="spinner-border ml-auto" role="status" aria-hidden="true"></div>
     </div>
     <div id="content-list">
     </div>

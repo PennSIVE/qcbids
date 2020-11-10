@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 # where available (npm@5+)
 COPY package*.json ./
 
-RUN npm install
+RUN npm install && git clone https://github.com/rii-mango/Papaya.git
 
 # Bundle app source
 COPY . .
