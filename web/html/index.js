@@ -140,12 +140,10 @@ const addSubjectToDom = (subj, subjIndex) => {
         </div></form>`
         let folderLabel = folder.split("_").splice(2).join(" ")
         modalityList += `<button type="button" class="btn btn-outline-secondary btn-sm pane-button pane-button-${uuid}-${thisSession} ${modalityDisplay}" id="pane-button-${uuid}-${i}" onclick="showPane(event.target, document.getElementsByClassName('pane-button-${uuid}-${thisSession}'), document.getElementById('pane-${uuid}-${i}'), document.getElementById('${uuid}-navbar-content'), document.getElementById('${uuid}-${i}-nifti-btn'), document.getElementById('${uuid}-${folder.replace('.', '')}-controls'))">${folderLabel}</button>`
-        contentList += `<div class="content-pane container-fluid ${i === 0 ? '' : 'd-none'}" id="pane-${uuid}-${i}">${reportForm}`
+        contentList += `<div class="content-pane ${i === 0 ? '' : 'd-none'}" id="pane-${uuid}-${i}">${reportForm}`
         let contentListInner = '<div class="row position-relative" style="z-index:-1">'
         if (subj.files[folder] === undefined) {
             contentListInner += `<p class="text-danger">${folder} could not be found!</p>`
-            let openAsNifti = `<button type="button" class="btn btn-light mb-2 d-none nifti-btn" id="${uuid}-${i}-nifti-btn" data-toggle="modal" data-nifti="${subj.niftis[folder]}" data-target="#niftiModal">Open Nifti</button>`
-            navbarContent += openAsNifti
         } else {
             let lowerLimit = subj.files[folder].length * 0.3;
             let upperLimit = subj.files[folder].length * 0.8;
@@ -154,16 +152,21 @@ const addSubjectToDom = (subj, subjIndex) => {
             // todo this is ugly
             let base = folder.split("_").splice(0, 3).join("_")
             for (let j = 0; j < subj.folders.length; j++) {
-                if (subj.folders[j].includes(base) && subj.folders[j].includes('brain')) {
+                if (subj.folders[j].includes(base) && subj.folders[j].includes('brain') && 
+                    ((folder.includes('mimosa') && subj.folders[j].toLowerCase().includes('flair')) || (subj.folders[j].toLowerCase().includes('t1')))) {
                     defaultComplement = subj.folders[j]
                     break
                 }
             }
-            let openAsNifti = `<button type="button" class="btn btn-light mb-2 d-none nifti-btn" id="${uuid}-${i}-nifti-btn" data-toggle="modal" data-nifti="${subj.niftis[folder]}" data-nifti2="/derivatives/${defaultComplement.replace("_ses-", "/ses-").replace("_run-", "/run-").replace("_", "/")}.nii.gz" data-target="#niftiModal">Open Nifti</button>`
+            let isSegmentation = false
+            if (folder.includes('mimosa') || folder.includes('fast') || folder.includes('thalamus')) { // more hardcoding...
+                isSegmentation = true
+            }
+            let openAsNifti = `<a target="_blank" href="/viewer.html?url${isSegmentation ? '2' : ''}=${encodeURIComponent(subj.niftis[folder])}${isSegmentation ? '&url=' +  encodeURIComponent('/derivatives/' + defaultComplement.replace("_ses-", "/ses-").replace("_run-", "/run-").replace("_", "/") + '.nii.gz') : ''}" class="btn btn-light d-none nifti-btn" id="${uuid}-${i}-nifti-btn">Open Nifti</button>`
             navbarContent += openAsNifti
             subj.files[folder].forEach((file, j) => {
                 if (j > lowerLimit && j < upperLimit) {
-                    if (folder.includes('mimosa') || folder.includes('thalamus')) {
+                    if (isSegmentation) {
                         contentListInner += `<div class="col-1 m-0 p-0 position-relative">
                                             <img alt="${folder}" class="underlay-${folder.replace('.', '')} p-0 m-0 img-fluid" src="${jpg_root}${defaultComplement}/${file}" />
                                             <img alt="${folder}" class="overlay-${folder.replace('.', '')} p-0 m-0 img-fluid position-absolute" src="${jpg_root}${folder}/${file}" style="opacity: 0.5;height:auto;width:100%;top:0;left:0;" />
@@ -176,8 +179,8 @@ const addSubjectToDom = (subj, subjIndex) => {
 
             })
             Array.from(overlaySliders).forEach((id, j) => {
-                let dropdownOptions = subj.folders.filter(x => x.includes(folder.split("_").splice(0, 3).join("_"))).map(x => `<a class="dropdown-item rounded-0" href="#" onclick="toggleBackground('${x}', '${id}', Math.round(${subj.files[x].length} * 0.3))">${x.split('_').splice(2).reverse().join(' ')}</a>`).join('')
-                navbarContent += `<form class="d-flex d-none overlay-slider" id="${uuid}-${id.replace('.', '')}-controls">
+                let dropdownOptions = subj.folders.filter(x => x.includes(folder.split("_").splice(0, 3).join("_"))).map(x => `<a class="dropdown-item rounded-0 ${x == defaultComplement ? 'active' : ''}" href="#" onclick="toggleBackground('${x}', '${id}', Math.round(${subj.files[x].length} * 0.3))">${x.split('_').splice(2).reverse().join(' ')}</a>`).join('')
+                navbarContent = `<form class="d-flex d-none overlay-slider pt-1" id="${uuid}-${id.replace('.', '')}-controls">
                     <div class="dropdown mr-3 ml-2">
                         <button class="btn btn-light dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         Background brain
@@ -187,8 +190,8 @@ const addSubjectToDom = (subj, subjIndex) => {
                         </div>
                     </div>
                     <label for="overlay-slider-${j}">Opacity</label>
-                    <input type="range" style="width: 30vw" oninput="pct = (this.value / 100); Array.from(document.getElementsByClassName('overlay-${id.replace('.', '')}')).forEach(el => el.style.opacity = pct)" class="form-range" id="overlay-slider-${j}" min="0" max="100" value="50">
-                </form>`
+                    <input type="range" style="width: 30vw" oninput="pct = (this.value / 100); Array.from(document.getElementsByClassName('overlay-${id.replace('.', '')}')).forEach(el => el.style.opacity = pct)" class="form-range ml-1 mr-2" id="overlay-slider-${j}" min="0" max="100" value="50">
+                </form>` + navbarContent
             })
         }
         contentListInner += '</div>'
@@ -214,21 +217,3 @@ const loadSubjects = () => {
     })
 }
 loadSubjects()
-
-
-let niftiModal = document.getElementById('niftiModal')
-niftiModal.addEventListener('show.bs.modal', (e) => {
-    let p = new URLSearchParams()
-    if (e.relatedTarget.dataset.nifti2 != undefined) {
-        p.append('url', window.location.origin + e.relatedTarget.dataset.nifti2)
-        p.append('url2', window.location.origin + e.relatedTarget.dataset.nifti)
-    } else {
-        p.append('url', window.location.origin + e.relatedTarget.dataset.nifti)
-    }
-    console.log(window.location.origin + e.relatedTarget.dataset.nifti2, window.location.origin + e.relatedTarget.dataset.nifti)
-    console.log(`/viewer.html?${p.toString()}`)
-    document.getElementById('niftiModalLabel').innerText = e.relatedTarget.dataset.nifti
-    document.getElementById('nifti-viewer').innerHTML = `<div style="height:calc(100vh - 80px);width:calc(100vw - 20px)">
-        <iframe style="height:100%;width:100%" src="/viewer.html?${p.toString()}" allowfullscreen></iframe>
-    </div>`
-})
