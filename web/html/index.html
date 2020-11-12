@@ -14,9 +14,14 @@
   <div style="clear:both;height:60px"></div>
   <nav class="navbar fixed-top navbar-dark bg-primary" id="navbar" style="-webkit-app-region: drag">
     <div class="container-fluid">
-      <div class="btn-group justify-content-end d-flex" role="group" aria-label="pagination">
-        <button type="button" onclick="changePage(-1)" id="prev" class="btn btn-secondary">Previous</button>
-        <button type="button" onclick="changePage(1)" id="next" class="btn btn-secondary">Next</button>
+      <div class="d-flex justify-content-start">
+        <div class="btn-group justify-content-end d-flex mr-2" role="group" aria-label="pagination">
+          <button type="button" onclick="changePage(-1)" id="prev" class="btn btn-secondary">Previous</button>
+          <button type="button" onclick="changePage(1)" id="next" class="btn btn-secondary">Next</button>
+        </div>
+        <select class="form-select" id="select_per_page" aria-label="Subjects per page" style="width: auto;">
+          <option># per page</option>
+        </select>
       </div>
       <div id="navbar-content"></div>
     </div>

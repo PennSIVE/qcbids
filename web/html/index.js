@@ -1,4 +1,5 @@
 const page = new URLSearchParams(window.location.search).get('page') || 0
+let per_page = new URLSearchParams(window.location.search).get('per_page') || 10
 const jpg_root = window.location.pathname
 
 const uuidv4 = () => {
@@ -24,7 +25,7 @@ const getJSON = (url, callback) => {
 
 
 function changePage(direction) {
-    window.location.href = window.location.pathname + "?page=" + (Number(page) + Number(direction))
+    window.location.href = window.location.pathname + "?page=" + (Number(page) + Number(direction)) + '&per_page=' + per_page
 }
 
 function toggleBackground(targetFolderId, clickedFolderId, start) {
@@ -169,7 +170,7 @@ const addSubjectToDom = (subj, subjIndex) => {
                     if (isSegmentation) {
                         contentListInner += `<div class="col-1 m-0 p-0 position-relative">
                                             <img alt="${folder}" class="underlay-${folder.replace('.', '')} p-0 m-0 img-fluid" src="${jpg_root}${defaultComplement}/${file}" />
-                                            <img alt="${folder}" class="overlay-${folder.replace('.', '')} p-0 m-0 img-fluid position-absolute" src="${jpg_root}${folder}/${file}" style="opacity: 0.5;height:auto;width:100%;top:0;left:0;" />
+                                            <img alt="${folder}" class="overlay-${folder.replace('.', '')} p-0 m-0 img-fluid position-absolute" src="${jpg_root}${folder}/${file}" style="opacity: 0.5;height:auto;width:100%;top:0;left:0;filter: sepia(100%) saturate(1000%) brightness(100%) hue-rotate(50deg);" />
                                         </div>`
                         overlaySliders.add(folder);
                     } else {
@@ -182,15 +183,15 @@ const addSubjectToDom = (subj, subjIndex) => {
                 let dropdownOptions = subj.folders.filter(x => x.includes(folder.split("_").splice(0, 3).join("_"))).map(x => `<a class="dropdown-item rounded-0 ${x == defaultComplement ? 'active' : ''}" href="#" onclick="toggleBackground('${x}', '${id}', Math.round(${subj.files[x].length} * 0.3))">${x.split('_').splice(2).reverse().join(' ')}</a>`).join('')
                 navbarContent = `<form class="d-flex d-none overlay-slider pt-1" id="${uuid}-${id.replace('.', '')}-controls">
                     <div class="dropdown mr-3 ml-2">
-                        <button class="btn btn-light dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <button class="btn btn-light dropdown-toggle" type="button" id="dropdownMenuButton-${id.replace('.', '')}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         Background brain
                         </button>
-                        <div class="dropdown-menu dropdown-menu-dark" aria-labelledby="dropdownMenuButton">
+                        <div class="dropdown-menu dropdown-menu-dark" aria-labelledby="dropdownMenuButton-${id.replace('.', '')}">
                             ${dropdownOptions}
                         </div>
                     </div>
-                    <label for="overlay-slider-${j}">Opacity</label>
-                    <input type="range" style="width: 30vw" oninput="pct = (this.value / 100); Array.from(document.getElementsByClassName('overlay-${id.replace('.', '')}')).forEach(el => el.style.opacity = pct)" class="form-range ml-1 mr-2" id="overlay-slider-${j}" min="0" max="100" value="50">
+                    <label for="overlay-slider-${id.replace('.', '')}">Opacity</label>
+                    <input type="range" style="width: 30vw" oninput="pct = (this.value / 100); Array.from(document.getElementsByClassName('overlay-${id.replace('.', '')}')).forEach(el => el.style.opacity = pct)" class="form-range ml-1 mr-2" id="overlay-slider-${id.replace('.', '')}" min="0" max="100" value="50">
                 </form>` + navbarContent
             })
         }
@@ -200,15 +201,27 @@ const addSubjectToDom = (subj, subjIndex) => {
     document.getElementById('modality-list').innerHTML = modalityList;
     document.getElementById('content-list').innerHTML = contentList;
     document.getElementById('navbar-content').innerHTML += `<div class="d-flex d-none navbar-content" id="${uuid}-navbar-content">${navbarContent}</div>`
-    if (subjIndex === 9) { // hardcoded 9 bc limit: 10 hardcoded below
+    if (subjIndex === per_page - 1) {
         showSession(firstPane, 0, firstSession, subj.folders[0].replace('.', ''))
     }
 }
 
+const setPerPage = () => {
+    let select = document.getElementById('select_per_page')
+    let options = select.innerHTML
+    for (let i = 1; i <= 20; i++) {
+        options += `<option value="${i}"${per_page == i ? ' selected' : ''}>${i}</option>`
+    }
+    select.innerHTML = options
+    select.onchange = (e) => {
+        per_page = Number(e.target.value)
+        changePage(0)
+    }
+}
 const loadSubjects = () => {
     getJSON('/api?' + new URLSearchParams({
         page: page,
-        limit: 10
+        limit: per_page
     }), (err, data) => {
         if (err === null) {
             data.forEach((s, i) => addSubjectToDom(s, i))
@@ -216,4 +229,5 @@ const loadSubjects = () => {
         }
     })
 }
+setPerPage()
 loadSubjects()
