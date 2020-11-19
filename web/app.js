@@ -29,17 +29,17 @@ const bidsName = (metaData) => {
     return ret;
 }
 
-const loadSubjects = (res, page, limit, skipReviewed = true) => {
+const loadSubjects = (res, page, limit, skipReviewed = true, importantModalities = ['t1_fast','thalamus','mimosa_binary_mask','flair_n4_brain_ws','t1_n4_reg_brain_ws']) => {
     let layout = {}
     let offset = page * limit
+    let targetScans = (importantModalities.length > 0) ? `AND (${importantModalities.map(x => 'file_path LIKE "%'+x+'%"').join(' OR ')})` : ''
     let subjects = (skipReviewed) ?
         `SELECT value FROM
             (SELECT DISTINCT _value AS value, COUNT(*) AS num_subj_images,
                 (SELECT COUNT(*) AS cnt FROM reports WHERE subject_id = CAST(_value AS INT)) AS num_subj_reports
-            FROM tags WHERE entity_name = 'subject' GROUP BY _value)
-            WHERE num_subj_images != num_subj_reports ORDER BY value ASC LIMIT ${limit} OFFSET ${offset}` :
+            FROM tags WHERE entity_name = 'subject' ${targetScans} GROUP BY _value)
+            WHERE num_subj_images > num_subj_reports ORDER BY value ASC LIMIT ${limit} OFFSET ${offset}` :
         `SELECT DISTINCT _value AS value FROM tags WHERE entity_name = 'subject' ORDER BY _value ASC LIMIT ${limit} OFFSET ${offset}`
-
     db.all(subjects, [], (err, rows) => {
         if (err) throw err;
 
@@ -133,9 +133,13 @@ app.get("/api", (req, res) => {
 })
 
 app.post('/review', (req, res) => {
-    db.run(`INSERT INTO reports (subject_id, content, rating, scan) VALUES (${req.body.subj}, '${req.body.textarea}', ${req.body.rating}, '${req.body.folder}')`, (err) => {
+    if (req.body.rating === undefined) {
+        return res.status(500).json('rating not submitted')
+    }
+    let sql = `REPLACE INTO reports (subject_id, content, rating, scan) VALUES (${req.body.subj}, '${req.body.textarea}', ${req.body.rating}, '${req.body.folder}')`
+    db.run(sql, (err) => {
         if (err) {
-            console.log(err)
+            console.log(sql, err)
             res.status(500).json(err)
         } else {
             res.status(200).json('success')
@@ -146,5 +150,5 @@ app.post('/review', (req, res) => {
 app.listen(port, () => {
     console.log(`Starting... http://localhost:${port}`)
     // ensure reports table exists
-    db.run('CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT, subject_id INTEGER, scan TEXT, content TEXT, rating REAL)')
+    db.run('CREATE TABLE IF NOT EXISTS reports (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, subject_id INTEGER, scan TEXT UNIQUE, content TEXT, rating REAL, sqltime TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)')
 })

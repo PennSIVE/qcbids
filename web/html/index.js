@@ -64,12 +64,14 @@ function showPane(paneButton, paneButtons, paneDiv, navbarContainer, niftiButton
     navbarContainer.classList.remove('d-none')
     niftiButton.classList.remove('d-none')
     if (controls != null) {
-        controls.classList.remove('d-none')   
+        controls.classList.remove('d-none')
     }
 }
 
 function submitReport(e, subj, folder) {
-    e.preventDefault();
+    if (e !== undefined) {
+        e.preventDefault();
+    }
     let rating = undefined
     Array.from(document.getElementById(`rating-${folder}`).children).forEach(child => {
         if (child.classList.contains('active')) {
@@ -96,6 +98,9 @@ function submitReport(e, subj, folder) {
 
 
 const addSubjectToDom = (subj, subjIndex) => {
+    if (subj.folders.length === 0) {
+        return;
+    }
     subj.folders.sort()
     let uuid = uuidv4()
     let firstSession = subj.folders[0].match(/[_/\\]+ses-([a-zA-Z0-9]+)/)[1]
@@ -125,11 +130,11 @@ const addSubjectToDom = (subj, subjIndex) => {
         <div class="form-group">
             <label for="rating-${folder}">Rating</label>
             <div class="btn-group" role="group" aria-label="Rating" id="rating-${folder}">
-                <button type="button" data-rating="0" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active')" class="btn btn-outline-danger ${subj.report[folder].rating == 0 ? 'active' : ''}">Awful</button>
-                <button type="button" data-rating="25" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active')" class="btn btn-outline-warning ${subj.report[folder].rating == 25 ? 'active' : ''}">Bad</button>
-                <button type="button" data-rating="50" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active')" class="btn btn-outline-secondary ${subj.report[folder].rating == 50 ? 'active' : ''}">Ok</button>
-                <button type="button" data-rating="75" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active')" class="btn btn-outline-primary ${subj.report[folder].rating == 75 ? 'active' : ''}">Good</button>
-                <button type="button" data-rating="100" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active')" class="btn btn-outline-success ${subj.report[folder].rating == 100 ? 'active' : ''}">Great</button>
+                <button type="button" data-rating="0" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active'); submitReport(undefined, '${subj.id}', '${folder}')" class="btn btn-outline-danger ${subj.report[folder].rating == 0 ? 'active' : ''}">Awful</button>
+                <button type="button" data-rating="25" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active'); submitReport(undefined, '${subj.id}', '${folder}')" class="btn btn-outline-warning ${subj.report[folder].rating == 25 ? 'active' : ''}">Bad</button>
+                <button type="button" data-rating="50" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active'); submitReport(undefined, '${subj.id}', '${folder}')" class="btn btn-outline-secondary ${subj.report[folder].rating == 50 ? 'active' : ''}">Ok</button>
+                <button type="button" data-rating="75" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active'); submitReport(undefined, '${subj.id}', '${folder}')" class="btn btn-outline-primary ${subj.report[folder].rating == 75 ? 'active' : ''}">Good</button>
+                <button type="button" data-rating="100" onclick="Array.from(this.parentElement.children).forEach(e => e.classList.remove('active')); this.classList.add('active'); submitReport(undefined, '${subj.id}', '${folder}')" class="btn btn-outline-success ${subj.report[folder].rating == 100 ? 'active' : ''}">Great</button>
             </div>
         </div>
         <div class="form-group">
@@ -140,38 +145,40 @@ const addSubjectToDom = (subj, subjIndex) => {
             <button type="submit" class="btn btn-primary">Submit</button>
         </div></form>`
         let folderLabel = folder.split("_").splice(2).join(" ")
-        modalityList += `<button type="button" class="btn btn-outline-secondary btn-sm pane-button pane-button-${uuid}-${thisSession} ${modalityDisplay}" id="pane-button-${uuid}-${i}" onclick="showPane(event.target, document.getElementsByClassName('pane-button-${uuid}-${thisSession}'), document.getElementById('pane-${uuid}-${i}'), document.getElementById('${uuid}-navbar-content'), document.getElementById('${uuid}-${i}-nifti-btn'), document.getElementById('${uuid}-${folder.replace('.', '')}-controls'))">${folderLabel}</button>`
+        modalityList += `<button type="button" class="btn btn-outline-secondary btn-sm pane-button pane-button-${uuid}-${thisSession} ${modalityDisplay}" id="pane-button-${uuid}-${i}" onclick="showPane(event.target, document.getElementsByClassName('pane-button-${uuid}-${thisSession}'), document.getElementById('pane-${uuid}-${i}'), document.getElementById('${uuid}-navbar-content'), document.getElementById('${uuid}-${i}-nifti-btn'), document.getElementById('${uuid}-${folder.replace('.', '')}-controls'))">${folderLabel}${subj.report[folder].rating === -1 ? '' : ' &#10003;'}</button>`
         contentList += `<div class="content-pane ${i === 0 ? '' : 'd-none'}" id="pane-${uuid}-${i}">${reportForm}`
         let contentListInner = '<div class="row position-relative" style="z-index:-1">'
+
+        let defaultComplement = undefined
+        // todo this is ugly
+        let base = folder.split("_").splice(0, 3).join("_")
+        for (let j = 0; j < subj.folders.length; j++) {
+            if (subj.folders[j].includes(base) && subj.folders[j].includes('brain') &&
+                ((folder.includes('mimosa') && subj.folders[j].toLowerCase().includes('flair')) || (subj.folders[j].toLowerCase().includes('t1')))) {
+                defaultComplement = subj.folders[j]
+                break
+            }
+        }
+        let isSegmentation = false
+        if (folder.includes('mimosa') || folder.includes('fast') || folder.includes('thalamus')) { // more hardcoding...
+            isSegmentation = true
+        }
+        let openAsNifti = `<a target="_blank" href="/viewer.html?url${isSegmentation ? '2' : ''}=${encodeURIComponent(subj.niftis[folder])}${isSegmentation ? '&url=' + encodeURIComponent('/derivatives/' + defaultComplement.replace("_ses-", "/ses-").replace("_run-", "/run-").replace("_", "/") + '.nii.gz') : ''}" class="btn btn-light d-none nifti-btn" id="${uuid}-${i}-nifti-btn">Open Nifti</button>`
+        navbarContent += openAsNifti
+
         if (subj.files[folder] === undefined) {
             contentListInner += `<p class="text-danger">${folder} could not be found!</p>`
         } else {
             let lowerLimit = subj.files[folder].length * 0.3;
             let upperLimit = subj.files[folder].length * 0.8;
             let overlaySliders = new Set();
-            let defaultComplement = undefined
-            // todo this is ugly
-            let base = folder.split("_").splice(0, 3).join("_")
-            for (let j = 0; j < subj.folders.length; j++) {
-                if (subj.folders[j].includes(base) && subj.folders[j].includes('brain') && 
-                    ((folder.includes('mimosa') && subj.folders[j].toLowerCase().includes('flair')) || (subj.folders[j].toLowerCase().includes('t1')))) {
-                    defaultComplement = subj.folders[j]
-                    break
-                }
-            }
-            let isSegmentation = false
-            if (folder.includes('mimosa') || folder.includes('fast') || folder.includes('thalamus')) { // more hardcoding...
-                isSegmentation = true
-            }
-            let openAsNifti = `<a target="_blank" href="/viewer.html?url${isSegmentation ? '2' : ''}=${encodeURIComponent(subj.niftis[folder])}${isSegmentation ? '&url=' +  encodeURIComponent('/derivatives/' + defaultComplement.replace("_ses-", "/ses-").replace("_run-", "/run-").replace("_", "/") + '.nii.gz') : ''}" class="btn btn-light d-none nifti-btn" id="${uuid}-${i}-nifti-btn">Open Nifti</button>`
-            navbarContent += openAsNifti
             subj.files[folder].forEach((file, j) => {
                 if (j > lowerLimit && j < upperLimit) {
                     if (isSegmentation) {
                         contentListInner += `<div class="col-1 m-0 p-0 position-relative">
-                                            <img alt="${folder}" class="underlay-${folder.replace('.', '')} p-0 m-0 img-fluid" src="${jpg_root}${defaultComplement}/${file}" />
-                                            <img alt="${folder}" class="overlay-${folder.replace('.', '')} p-0 m-0 img-fluid position-absolute" src="${jpg_root}${folder}/${file}" style="opacity: 0.5;height:auto;width:100%;top:0;left:0;filter: sepia(100%) saturate(1000%) brightness(100%) hue-rotate(50deg);" />
-                                        </div>`
+                                                <img alt="${folder}" class="underlay-${folder.replace('.', '')} p-0 m-0 img-fluid" src="${jpg_root}${defaultComplement}/${file}" />
+                                                <img alt="${folder}" class="overlay-${folder.replace('.', '')} p-0 m-0 img-fluid position-absolute" src="${jpg_root}${folder}/${file}" style="opacity: 0.5;height:auto;width:100%;top:0;left:0;filter: sepia(100%) saturate(1000%) brightness(100%) hue-rotate(50deg);" />
+                                            </div>`
                         overlaySliders.add(folder);
                     } else {
                         contentListInner += `<div class="col-1 m-0 p-0"><img alt="${folder}" class="p-0 m-0 img-fluid" src="${jpg_root}${folder}/${file}" /></div>`
@@ -180,19 +187,19 @@ const addSubjectToDom = (subj, subjIndex) => {
 
             })
             Array.from(overlaySliders).forEach((id, j) => {
-                let dropdownOptions = subj.folders.filter(x => x.includes(folder.split("_").splice(0, 3).join("_"))).map(x => `<a class="dropdown-item rounded-0 ${x == defaultComplement ? 'active' : ''}" href="#" onclick="toggleBackground('${x}', '${id}', Math.round(${subj.files[x].length} * 0.3))">${x.split('_').splice(2).reverse().join(' ')}</a>`).join('')
+                let dropdownOptions = subj.folders.filter(x => x.includes(folder.split("_").splice(0, 3).join("_"))).map(x => `<a class="dropdown-item rounded-0 ${x == defaultComplement ? 'active' : ''}" href="#" onclick="toggleBackground('${x}', '${id}', Math.round(${subj.files[x] === undefined ? 0 : subj.files[x].length} * 0.3))">${x.split('_').splice(2).reverse().join(' ')}</a>`).join('')
                 navbarContent = `<form class="d-flex d-none overlay-slider pt-1" id="${uuid}-${id.replace('.', '')}-controls">
-                    <div class="dropdown mr-3 ml-2">
-                        <button class="btn btn-light dropdown-toggle" type="button" id="dropdownMenuButton-${id.replace('.', '')}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Background brain
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-dark" aria-labelledby="dropdownMenuButton-${id.replace('.', '')}">
-                            ${dropdownOptions}
+                        <div class="dropdown mr-3 ml-2">
+                            <button class="btn btn-light dropdown-toggle" type="button" id="dropdownMenuButton-${id.replace('.', '')}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Background brain
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-dark" aria-labelledby="dropdownMenuButton-${id.replace('.', '')}">
+                                ${dropdownOptions}
+                            </div>
                         </div>
-                    </div>
-                    <label for="overlay-slider-${id.replace('.', '')}">Opacity</label>
-                    <input type="range" style="width: 30vw" oninput="pct = (this.value / 100); Array.from(document.getElementsByClassName('overlay-${id.replace('.', '')}')).forEach(el => el.style.opacity = pct)" class="form-range ml-1 mr-2" id="overlay-slider-${id.replace('.', '')}" min="0" max="100" value="50">
-                </form>` + navbarContent
+                        <label for="overlay-slider-${id.replace('.', '')}">Opacity</label>
+                        <input type="range" style="width: 30vw" oninput="pct = (this.value / 100); Array.from(document.getElementsByClassName('overlay-${id.replace('.', '')}')).forEach(el => el.style.opacity = pct)" class="form-range ml-1 mr-2" id="overlay-slider-${id.replace('.', '')}" min="0" max="100" value="50">
+                    </form>` + navbarContent
             })
         }
         contentListInner += '</div>'
