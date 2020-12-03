@@ -210,6 +210,8 @@ const addSubjectToDom = (subj, subjIndex) => {
     document.getElementById('navbar-content').innerHTML += `<div class="d-flex d-none navbar-content" id="${uuid}-navbar-content">${navbarContent}</div>`
     if (subjIndex === per_page - 1) {
         showSession(firstPane, 0, firstSession, subj.folders[0].replace('.', ''))
+        // start loading less important things
+        loadCompletedPages(per_page)
     }
 }
 
@@ -228,11 +230,32 @@ const setPerPage = () => {
 const loadSubjects = () => {
     getJSON('/api?' + new URLSearchParams({
         page: page,
-        limit: per_page
+        limit: per_page,
+        action: 'loadSubjects'
     }), (err, data) => {
         if (err === null) {
             data.forEach((s, i) => addSubjectToDom(s, i))
             document.getElementById('loader').classList.add('d-none')
+            if (data.length === 0) {
+                alert("No subjects left to review")
+            }
+        } else {
+            console.log(err, data)
+        }
+    })
+}
+const loadCompletedPages = (per_page) => {
+    getJSON('/api?' + new URLSearchParams({
+        limit: per_page,
+        action: 'loadCompletedPages'
+    }), (err, count) => {
+        if (err === null) {
+            let dropdown = document.getElementById('completedPagesDropdown-content')
+            for (let i = 1; i <= count; i++) {
+                dropdown.innerHTML += `<a class="dropdown-item rounded-0" href="#">page ${i}</a>`
+            }
+        } else {
+            console.log(err, count)
         }
     })
 }

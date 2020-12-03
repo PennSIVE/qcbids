@@ -29,10 +29,10 @@ const bidsName = (metaData) => {
     return ret;
 }
 
-const loadSubjects = (res, page, limit, skipReviewed = true, importantModalities = ['t1_fast','thalamus','mimosa_binary_mask','flair_n4_brain_ws','t1_n4_reg_brain_ws']) => {
+const loadSubjects = (res, page, limit, skipReviewed = true, importantModalities = ['t1_fast', 'thalamus', 'mimosa_binary_mask', 'flair_n4_brain_ws', 't1_n4_reg_brain_ws']) => {
     let layout = {}
     let offset = page * limit
-    let targetScans = (importantModalities.length > 0) ? `AND (${importantModalities.map(x => 'file_path LIKE "%'+x+'%"').join(' OR ')})` : ''
+    let targetScans = (importantModalities.length > 0) ? `AND (${importantModalities.map(x => 'file_path LIKE "%' + x + '%"').join(' OR ')})` : ''
     let subjects = (skipReviewed) ?
         `SELECT value FROM
             (SELECT DISTINCT _value AS value, COUNT(*) AS num_subj_images,
@@ -45,6 +45,9 @@ const loadSubjects = (res, page, limit, skipReviewed = true, importantModalities
 
         let nrow = rows.length
         let ret = []
+        if (nrow === 0) {
+            res.send(ret)
+        }
         rows.forEach((row) => {
             // for each subject
             let subjLabel = row.value
@@ -81,7 +84,7 @@ const loadSubjects = (res, page, limit, skipReviewed = true, importantModalities
                         let folderName = bidsName(currentMetaData)
                         layout[row.subj].folders.push(folderName)
                         layout[row.subj].niftis[folderName] = (lastPath.includes("derivatives") ? '/derivatives/' : '/')
-                                                                + lastPath.slice(/sub-[0-9]*/.exec(lastPath).index)
+                            + lastPath.slice(/sub-[0-9]*/.exec(lastPath).index)
                         currentMetaData = {}
                         lastFolder = folderName
                     }
@@ -114,6 +117,14 @@ const loadSubjects = (res, page, limit, skipReviewed = true, importantModalities
     });
 }
 
+const completedPages = (res, limit) => {
+    let completedSubjects = `SELECT COUNT(DISTINCT _value) AS cnt FROM tags WHERE entity_name = 'subject' AND _value IN (SELECT DISTINCT subject_id FROM reports) ORDER BY _value ASC`
+    db.get(completedSubjects, (err, row) => {
+        let pagesDone = Math.floor(row.cnt / limit)
+        res.send(pagesDone.toString())
+    });
+}
+
 app.use(express.static(__dirname + '/html'))
 app.use(express.static(__dirname + '/node_modules'))
 app.use('/papaya', express.static(__dirname + '/Papaya/release/current/minimal'))
@@ -129,7 +140,11 @@ app.get("/node_modules*", (req, res) => {
 
 app.get("/api", (req, res) => {
     // res.setHeader('Content-Type', 'application/json');
-    loadSubjects(res, req.query.page, req.query.limit)
+    if (req.query.action === 'loadSubjects') {
+        loadSubjects(res, req.query.page, req.query.limit)
+    } else if (req.query.action === 'loadCompletedPages') {
+        completedPages(res, req.query.limit)
+    }
 })
 
 app.post('/review', (req, res) => {
