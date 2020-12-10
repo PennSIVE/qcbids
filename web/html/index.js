@@ -1,5 +1,6 @@
-const page = new URLSearchParams(window.location.search).get('page') || 0
-let per_page = new URLSearchParams(window.location.search).get('per_page') || 10
+const page = Number(new URLSearchParams(window.location.search).get('page')) || 0
+const skip_reviewed = Number(new URLSearchParams(window.location.search).get('skip_reviewed')) || 1
+let per_page = Number(new URLSearchParams(window.location.search).get('per_page')) || 10
 const jpg_root = window.location.pathname
 
 const uuidv4 = () => {
@@ -25,7 +26,7 @@ const getJSON = (url, callback) => {
 
 
 function changePage(direction) {
-    window.location.href = window.location.pathname + "?page=" + (Number(page) + Number(direction)) + '&per_page=' + per_page
+    window.location.href = window.location.pathname + "?page=" + (page + Number(direction)) + '&per_page=' + per_page
 }
 
 function toggleBackground(targetFolderId, clickedFolderId, start) {
@@ -212,6 +213,7 @@ const addSubjectToDom = (subj, subjIndex) => {
         showSession(firstPane, 0, firstSession, subj.folders[0].replace('.', ''))
         // start loading less important things
         loadCompletedPages(per_page)
+        loadTodoPages(per_page)
     }
 }
 
@@ -231,7 +233,8 @@ const loadSubjects = () => {
     getJSON('/api?' + new URLSearchParams({
         page: page,
         limit: per_page,
-        action: 'loadSubjects'
+        action: 'loadSubjects',
+        skip_reviewed: skip_reviewed
     }), (err, data) => {
         if (err === null) {
             data.forEach((s, i) => addSubjectToDom(s, i))
@@ -252,7 +255,22 @@ const loadCompletedPages = (per_page) => {
         if (err === null) {
             let dropdown = document.getElementById('completedPagesDropdown-content')
             for (let i = 1; i <= count; i++) {
-                dropdown.innerHTML += `<a class="dropdown-item rounded-0" href="#">page ${i}</a>`
+                dropdown.innerHTML += `<a class="dropdown-item rounded-0 ${(!skip_reviewed && page === i) ? 'active' : ''}" href="${window.location.pathname}?page=${i}&per_page=${per_page}&skip_reviewed=0">page ${i}</a>`
+            }
+        } else {
+            console.log(err, count)
+        }
+    })
+}
+const loadTodoPages = (per_page) => {
+    getJSON('/api?' + new URLSearchParams({
+        limit: per_page,
+        action: 'loadTodoPages'
+    }), (err, count) => {
+        if (err === null) {
+            let dropdown = document.getElementById('todoPagesDropdown-content')
+            for (let i = 1; i <= count; i++) {
+                dropdown.innerHTML += `<a class="dropdown-item rounded-0 ${(skip_reviewed && page === i) ? 'active' : ''}" href="${window.location.pathname}?page=${i}&per_page=${per_page}&skip_reviewed=1">page ${i}</a>`
             }
         } else {
             console.log(err, count)

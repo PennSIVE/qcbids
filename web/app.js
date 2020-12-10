@@ -124,6 +124,13 @@ const completedPages = (res, limit) => {
         res.send(pagesDone.toString())
     });
 }
+const todoPages = (res, limit) => {
+    let todoSubjects = `SELECT COUNT(DISTINCT _value) AS cnt FROM tags WHERE entity_name = 'subject' AND _value NOT IN (SELECT DISTINCT subject_id FROM reports) ORDER BY _value ASC`
+    db.get(todoSubjects, (err, row) => {
+        let pagesDone = Math.floor(row.cnt / limit)
+        res.send(pagesDone.toString())
+    });
+}
 
 app.use(express.static(__dirname + '/html'))
 app.use(express.static(__dirname + '/node_modules'))
@@ -141,9 +148,12 @@ app.get("/node_modules*", (req, res) => {
 app.get("/api", (req, res) => {
     // res.setHeader('Content-Type', 'application/json');
     if (req.query.action === 'loadSubjects') {
-        loadSubjects(res, req.query.page, req.query.limit)
+        loadSubjects(res, req.query.page, req.query.limit, req.query.skip_reviewed === '1')
     } else if (req.query.action === 'loadCompletedPages') {
         completedPages(res, req.query.limit)
+    }
+    else if (req.query.action === 'loadTodoPages') {
+        todoPages(res, req.query.limit)
     }
 })
 
